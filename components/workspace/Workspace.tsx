@@ -60,9 +60,6 @@ export function Workspace({
   const [pane4Open, setPane4Open] = useState(true);
   const [addEventOpen, setAddEventOpen] = useState(false);
 
-  // アクティブイベント
-  const activeEvent = events.find((e) => e.id === selectedEventId) ?? null;
-
   // フィルター適用済みイベント（子ども軸 + カテゴリ軸）
   const filteredEvents = useMemo(() => {
     return events.filter((e) => {
@@ -72,6 +69,16 @@ export function Workspace({
       return true;
     });
   }, [events, selectedChildId, selectedCategoryId]);
+
+  // ② フィルター変更後に選択 ID がリスト外になった場合は先頭にフォールバック
+  //    （Effect+setState を避け、レンダー時に派生計算する React 19 推奨パターン）
+  const resolvedEventId = filteredEvents.some((e) => e.id === selectedEventId)
+    ? selectedEventId
+    : (filteredEvents[0]?.id ?? null);
+
+  // resolvedEventId は全件から解決（フィルター外イベントを誤表示しない）
+  const activeEvent =
+    events.find((e) => e.id === resolvedEventId) ?? null;
 
   // 月グループ（日付降順）
   const monthGroups: MonthGroup[] = useMemo(() => {
@@ -138,6 +145,14 @@ export function Workspace({
   const deleteChild = useCallback((id: string) => {
     setChildren((prev) => prev.filter((c) => c.id !== id));
     setSelectedChildId((prev) => (prev === id ? null : prev));
+    // ③ イベントのタグから孤立 ID を除去
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.childIds.includes(id)
+          ? { ...e, childIds: e.childIds.filter((cid) => cid !== id) }
+          : e,
+      ),
+    );
   }, []);
 
   const addCategory = useCallback((label: string, emoji: string) => {
@@ -152,6 +167,14 @@ export function Workspace({
   const deleteCategory = useCallback((id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setSelectedCategoryId((prev) => (prev === id ? null : prev));
+    // ③ イベントのタグから孤立 ID を除去
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.categoryIds.includes(id)
+          ? { ...e, categoryIds: e.categoryIds.filter((cid) => cid !== id) }
+          : e,
+      ),
+    );
   }, []);
 
   const togglePane4 = useCallback(() => setPane4Open((v) => !v), []);
@@ -187,18 +210,20 @@ export function Workspace({
           <GlobalHeader
             workspaceName={workspace.name}
             filterLabel={filterLabel}
-            eventCaption={activeEvent?.caption ?? "イベント未選択"}
+            eventCaption={activeEvent?.caption ?? "（イベント未選択）"}
           />
           <div className="flex min-h-0 flex-1">
             <EventListPane
               groups={monthGroups}
               children={children}
               categories={categories}
-              selectedEventId={selectedEventId}
+              selectedEventId={resolvedEventId}
               onSelectEvent={setSelectedEventId}
               onAddEvent={() => setAddEventOpen(true)}
             />
+            {/* ① key={resolvedEventId} でイベント切り替え時に非制御 input をリマウント */}
             <EventDetailPane
+              key={resolvedEventId ?? "empty"}
               event={activeEvent}
               children={children}
               categories={categories}
