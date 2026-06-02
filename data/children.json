@@ -1,0 +1,14 @@
+[
+  {
+    "id": "child-1",
+    "name": "長男",
+    "emoji": "👦",
+    "birthdate": "2019-04-15"
+  },
+  {
+    "id": "child-2",
+    "name": "次男",
+    "emoji": "👶",
+    "birthdate": "2023-08-20"
+  }
+]

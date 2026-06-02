@@ -1,24 +1,34 @@
 import { Workspace } from "@/components/workspace/Workspace";
-import positionsData from "@/data/positions.json";
-import candidatesData from "@/data/candidates.json";
+import childrenData from "@/data/children.json";
+import categoriesData from "@/data/categories.json";
+import eventsData from "@/data/events.json";
 import workspaceData from "@/data/workspace.json";
 import {
-  departmentsSchema,
-  candidatesSchema,
+  childrenSchema,
+  categoriesSchema,
+  eventsSchema,
   workspaceSchema,
 } from "@/lib/schema";
 
 export default function Page() {
-  const deptResult = departmentsSchema.safeParse(positionsData);
-  const candResult = candidatesSchema.safeParse(candidatesData);
+  const childrenResult = childrenSchema.safeParse(childrenData);
+  const categoriesResult = categoriesSchema.safeParse(categoriesData);
+  const eventsResult = eventsSchema.safeParse(eventsData);
   const wsResult = workspaceSchema.safeParse(workspaceData);
 
-  if (!deptResult.success || !candResult.success || !wsResult.success) {
+  if (
+    !childrenResult.success ||
+    !categoriesResult.success ||
+    !eventsResult.success ||
+    !wsResult.success
+  ) {
     const errors = [
-      !deptResult.success &&
-        `positions.json: ${deptResult.error.issues[0]?.message}`,
-      !candResult.success &&
-        `candidates.json: ${candResult.error.issues[0]?.message}`,
+      !childrenResult.success &&
+        `children.json: ${childrenResult.error.issues[0]?.message}`,
+      !categoriesResult.success &&
+        `categories.json: ${categoriesResult.error.issues[0]?.message}`,
+      !eventsResult.success &&
+        `events.json: ${eventsResult.error.issues[0]?.message}`,
       !wsResult.success &&
         `workspace.json: ${wsResult.error.issues[0]?.message}`,
     ].filter(Boolean);
@@ -27,8 +37,9 @@ export default function Page() {
 
   return (
     <Workspace
-      initialDepartments={deptResult.data}
-      initialCandidates={candResult.data}
+      initialChildren={childrenResult.data}
+      initialCategories={categoriesResult.data}
+      initialEvents={eventsResult.data}
       workspace={wsResult.data}
     />
   );

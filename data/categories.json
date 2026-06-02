@@ -1,0 +1,10 @@
+[
+  { "id": "cat-birthday",   "label": "誕生日",       "emoji": "🎂" },
+  { "id": "cat-hospital",   "label": "病院",          "emoji": "🏥" },
+  { "id": "cat-first",      "label": "初めて",        "emoji": "🌟" },
+  { "id": "cat-school",     "label": "進学・進級",    "emoji": "🎒" },
+  { "id": "cat-sports",     "label": "運動会・習い事","emoji": "⚽" },
+  { "id": "cat-daily",      "label": "日常",          "emoji": "☀️" },
+  { "id": "cat-family",     "label": "家族イベント",  "emoji": "🏠" },
+  { "id": "cat-other",      "label": "その他",        "emoji": "📝" }
+]

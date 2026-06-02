@@ -1,459 +1,231 @@
 "use client";
 
 /**
- * Workspace: 4 ペインの親コンポーネント。
+ * Workspace: ファミリーフィード 4ペインの親コンポーネント。
  *
- * - Pane 1〜4 の state（candidates / selectedCandidateId / selectedDetail）を
- *   保持し、各ペインに props として渡す。
- *   `previousDetail` state は ADR-0011 §6 大決定 D で削除した（戻り先が候詳に固定
- *   されたため、直前の詳細を 1 段階覚える概念が不要になった）。
- * - Pane 3 = 候補者ダッシュボード（人物軸の編集: ヘッダー帯 + 採用条件 + 選考フロー）
- * - Pane 4 = ステージ軸の編集（選考ステージ詳細のみ）
- *   ADR-0015 §9 大決定 G により、Pane 4 のデフォルト state は `null`
- *   （ステージ未選択 = 畳み状態）。◀ ボタンは撤廃。
- *
- * レイアウト構造（shadcn/ui Sidebar を採用、ADR-0006 §3/§5 を本実装で改訂）:
- *
+ * レイアウト構造:
  * ```
- * <SidebarProvider> (h-screen, defaultOpen, Cmd+B でトグル)
- * ┌─ Sidebar (Pane 1) ─┬─ SidebarInset ─────────────────────┐
- * │ (画面最上端          │ ┌─ GlobalHeader (h-12) ─────────┐ │
- * │  〜最下端)           │ └─────────────────────────────────┘ │
- * │ collapsible="icon"  │ ┌─ Pane 2 ─┬─ Pane 3 ─┬─ Pane 4 ─┐ │
- * │ 240px ↔ 48px        │ │          │          │          │ │
- * └────────────────────┴─┴──────────┴──────────┴──────────┘
+ * <SidebarProvider>
+ * ┌─ Sidebar (Pane 1) ─┬─ SidebarInset ─────────────────────────┐
+ * │ 子どもセレクタ       │ ┌─ GlobalHeader (h-12) ──────────────┐ │
+ * │ カテゴリフィルター   │ └────────────────────────────────────┘ │
+ * │                    │ ┌─ Pane2 ─┬─ Pane3 ────┬─ Pane4 ──────┐ │
+ * │                    │ │タイムライン│イベント詳細│AI サマリー   │ │
+ * └────────────────────┴─┴──────────┴────────────┴──────────────┘
  * ```
- *
- * - Pane 1 のみ画面最上端〜最下端まで届く chrome（折りたたみ可）
- * - GlobalHeader は Pane 1 を除く右側全幅（Pane 2 / Pane 3 / Pane 4 の上）に渡る
- * - Pane 4 はヘッダー直下から最下端まで
- * - Pane 1 折りたたみトグルは Pane 1 ヘッダー右端の `Pane1Toggle` 1 箇所
- *   （ADR-0006 §5 で計画していた GlobalHeader 側の SidebarTrigger は本実装で撤回）
- *
- * 仕様の出典:
- *   - openspec/decision/0006-pane-background-hierarchy-and-shadcn-inset-header.md
- *     §2（4 段階背景色階層）/ §4（保存ステータス削除）はそのまま採用
- *     §3（Pane 4 = 画面最上端〜最下端 / ヘッダーは中央エリアのみ）は本実装で再改訂
- *     §5（SidebarTrigger は GlobalHeader）も本実装で再改訂（Pane 1 ヘッダー側に集約）
- *   - openspec/decision/0009-drilldown-card-affordance.md（Pane 3 ドリルダウンカードの ▶ 規律）
- *   - openspec/changes/add-4pane-workspace-template/specs/workspace-template/spec.md
- *   - openspec/changes/add-4pane-workspace-template/design.md D51〜D56 / D65
  */
 
 import { useState, useCallback, useMemo } from "react";
 
 import {
-  type Profile,
-  type AxisKey,
-  type StageKey,
-  type Department,
-  type Candidate,
-  type Group,
-  type SelectedDetail,
-  STAGE_ORDER,
+  type Child,
+  type Category,
+  type FamilyEvent,
+  type WorkspaceConfig,
+  type MonthGroup,
+  type EventRow,
 } from "@/lib/schema";
-import {
-  createMinimalProfile,
-  createMinimalScorecard,
-} from "@/lib/data/factories";
-import { getCandidateAverageScore } from "@/lib/computed/scorecards";
-import { ARCHIVED_GROUP_LABEL, STAGE_LABELS } from "@/lib/labels";
+import { formatMonthLabel, ALL_CHILDREN_LABEL } from "@/lib/labels";
+import { createMinimalEvent } from "@/lib/data/factories";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { GlobalHeader } from "@/components/workspace/GlobalHeader";
-import { PositionPane } from "@/components/workspace/PositionPane";
-import { CandidateListPane } from "@/components/workspace/CandidateListPane";
-import { CandidateDashboardPane } from "@/components/workspace/CandidateDashboardPane";
-import { CandidateDetailPane } from "@/components/workspace/CandidateDetailPane";
-
-// ========== UI 内部型 ==========
-//
-// 種データは `data/*.json` → Server Component（app/page.tsx）で Zod parse → props で受け取る。
-// ヘルパー関数（createMinimalProfile / createMinimalScorecard）は `lib/data/factories.ts`。
-// Pane 2 の表示用派生型 (CandidateRow / Group) と `SelectedDetail` 型は
-// `lib/schema.ts` に集約（複数ペインで共有するため）。
-// Pane 4 モード 2 用の `EditableScorecardKey` は
-// `components/workspace/CandidateDetailPane.tsx` 内部の閉じた型。
-
-// `updateScorecardField` の field 引数で使う key の union 型。Pane 4 内部の
-// `EditableScorecardKey` と同形。CandidateDetailPane 内部に閉じた型として扱い
-// たいため export せず、親側で同じ形を再宣言して持つ。
-//
-// ADR-0014「shadcn 標準フォームによる Pane 4 編集 UI」で `comment` / `summary`
-// を `InlineTextareaField` で編集対象に追加したため、旧 4 フィールドから 6 フィールド
-// に拡張。CandidateDetailPane.tsx 側の同型宣言（line 70-76）と同期させる。
-// `onUpdateScorecardField` 実装本体は `[field]: value` のスプレッドで
-// 動作するため、ロジックの追加修正は不要。
-type EditableScorecardKey =
-  | "date"
-  | "format"
-  | "interviewer"
-  | "decision"
-  | "comment"
-  | "summary";
+import { FamilyPane } from "@/components/workspace/FamilyPane";
+import { EventListPane } from "@/components/workspace/EventListPane";
+import { EventDetailPane } from "@/components/workspace/EventDetailPane";
+import { AiSummaryPane } from "@/components/workspace/AiSummaryPane";
+import { AddItemDialog } from "@/components/workspace/AddItemDialog";
 
 type WorkspaceProps = {
-  initialDepartments: Department[];
-  initialCandidates: Candidate[];
-  workspace: { name: string; icon: string };
+  initialChildren: Child[];
+  initialCategories: Category[];
+  initialEvents: FamilyEvent[];
+  workspace: WorkspaceConfig;
 };
 
 export function Workspace({
-  initialDepartments,
-  initialCandidates,
+  initialChildren,
+  initialCategories,
+  initialEvents,
   workspace,
 }: WorkspaceProps) {
-  const [departments, setDepartments] =
-    useState<Department[]>(initialDepartments);
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("c2");
-  const [selectedDetail, setSelectedDetail] = useState<SelectedDetail>(null);
-  const [scrollAnchor, setScrollAnchor] = useState<string | null>(null);
-  // ユーザーが手動で Pane 4 を畳んだか。ステージ選択は保持しつつ畳む用途。
-  const [pane4ManuallyClosed, setPane4ManuallyClosed] = useState(false);
-  // Pane 3 ヘッダー帯（Collapsible）の開閉。候補者切替で閉じ、新規追加で開く。
-  const [applicationInfoOpen, setApplicationInfoOpen] = useState(false);
+  const [children, setChildren] = useState<Child[]>(initialChildren);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [events, setEvents] = useState<FamilyEvent[]>(initialEvents);
 
-  // Pane 4 の展開状態を派生計算（ADR-0015 §9 大決定 G）。
-  // selectedDetail !== null かつ手動で畳んでいない → 開いている。
-  const pane4Open = selectedDetail !== null && !pane4ManuallyClosed;
-
-  // アクティブ候補者を取得。`INITIAL_CANDIDATES` が常に最低 1 名持つ前提だが、
-  // 万一 find が undefined を返す（未来に candidates の削除機能が入った場合等）
-  // ケースに備えて先頭候補者にフォールバックする。
-  const activeCandidate =
-    candidates.find((c) => c.id === selectedCandidateId) ?? candidates[0];
-  const profile = activeCandidate.profile;
-  const scorecards = activeCandidate.scorecards;
-
-  // Mode1ProfileDetail は `setProfile: React.Dispatch<React.SetStateAction<Profile>>`
-  // を期待している（採用案 X）。子コンポーネント側の signature を変えないために、
-  // candidates 配列を更新するアダプタをここで作る。
-  // 関数形 (p => next) と値形 (next) の両方に対応する。
-  const setProfile = useCallback<React.Dispatch<React.SetStateAction<Profile>>>(
-    (action) => {
-      setCandidates((prev) =>
-        prev.map((c) => {
-          if (c.id !== selectedCandidateId) return c;
-          const next =
-            typeof action === "function" ? action(c.profile) : action;
-          return { ...c, profile: next };
-        }),
-      );
-    },
-    [selectedCandidateId],
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(
+    initialEvents[0]?.id ?? null,
   );
+  const [pane4Open, setPane4Open] = useState(true);
+  const [addEventOpen, setAddEventOpen] = useState(false);
 
-  const openDetail = useCallback(
-    (next: SelectedDetail, anchor?: string) => {
-      if (next?.type === "stage") {
-        setCandidates((prev) =>
-          prev.map((c) => {
-            if (c.id !== selectedCandidateId) return c;
-            if (c.scorecards.some((s) => s.stage === next.stage)) return c;
-            return {
-              ...c,
-              scorecards: [...c.scorecards, createMinimalScorecard(next.stage)],
-            };
-          }),
-        );
-      }
-      setSelectedDetail(next);
-      setScrollAnchor(anchor ?? null);
-      setPane4ManuallyClosed(false);
-    },
-    [selectedCandidateId],
-  );
+  // アクティブイベント
+  const activeEvent = events.find((e) => e.id === selectedEventId) ?? null;
 
-  // Pane 2 の候補者行クリックでアクティブ候補者を切り替える。
-  // - selectedDetail が「ステージ詳細」だった場合、新候補者にそのステージの
-  //   scorecard が無ければ Pane 4 を **候補者詳細にフォールバック**する
-  //   （ADR-0011 §7 大決定 E、旧 null フォールバックを撤回）。c2 以外は
-  //   scorecards: [] のため、c2 → 別候補者の切替時はほぼ常に候詳へフォールバック。
-  // - selectedDetail が「候補者詳細」のときは維持してよい（profile はどの候補者にも
-  //   必ず存在する）。
-  // - previousDetail state は ADR-0011 §6 大決定 D で削除済みのため、リセット不要。
-  const selectCandidate = useCallback((id: string) => {
-    setSelectedCandidateId(id);
-    setSelectedDetail(null);
-    setApplicationInfoOpen(false);
-    setPane4ManuallyClosed(false);
-  }, []);
-
-  const addCandidate = useCallback((stage: StageKey, name: string) => {
-    const newId = `c-${Date.now()}`;
-    const newCandidate: Candidate = {
-      id: newId,
-      profile: createMinimalProfile(name),
-      scorecards: [],
-      stage,
-      archived: false,
-    };
-    setCandidates((prev) => [...prev, newCandidate]);
-    setSelectedCandidateId(newId);
-    setSelectedDetail(null);
-    setApplicationInfoOpen(true);
-    setPane4ManuallyClosed(false);
-  }, []);
-
-  // 候補者をアーカイブ（論理削除）する。データは残し `archived: true` を立てる。
-  // 復元は `restoreCandidate` から、もしくは Pane 2「アーカイブ済み」グループの
-  // 「復元」ボタン経由。アクティブ候補者をアーカイブした場合は、非 archived の
-  // 先頭候補者にフォールバックし、ステージ詳細（Pane 4）はクリアする。
-  const archiveCandidate = useCallback((id: string) => {
-    setCandidates((prev) => {
-      const next = prev.map((c) =>
-        c.id === id ? { ...c, archived: true } : c,
-      );
-      setSelectedCandidateId((prevId) => {
-        if (prevId !== id) return prevId;
-        const fallback = next.find((c) => !c.archived);
-        return fallback ? fallback.id : "";
-      });
-      return next;
+  // フィルター適用済みイベント（子ども軸 + カテゴリ軸）
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      if (selectedChildId && !e.childIds.includes(selectedChildId)) return false;
+      if (selectedCategoryId && !e.categoryIds.includes(selectedCategoryId))
+        return false;
+      return true;
     });
-    setSelectedDetail(null);
-    setPane4ManuallyClosed(false);
-  }, []);
+  }, [events, selectedChildId, selectedCategoryId]);
 
-  // アーカイブ済み候補者を元のステージに復元する。`stage` は archived 中も保持
-  // しているので、そのステージへ戻すだけでよい。
-  const restoreCandidate = useCallback((id: string) => {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, archived: false } : c)),
+  // 月グループ（日付降順）
+  const monthGroups: MonthGroup[] = useMemo(() => {
+    const sorted = [...filteredEvents].sort((a, b) =>
+      b.date.localeCompare(a.date),
     );
-  }, []);
 
-  // 候補者を別ステージへ移動 / 同ステージ内で並び替え。
-  //
-  // `toStage` は移動先のステージキー。`toIndex` はそのステージグループ内での
-  // 0-origin の挿入位置。配列順を SSoT としているため、candidates 配列上の
-  // 絶対インデックスに変換して `splice` 相当の挿入を行う。
-  //
-  // 同ステージ内ドラッグ・別ステージへのドラッグの両方をこの 1 関数で扱う。
-  // archived 候補者は対象外（DnD はアクティブな候補者のみ可能）。
-  const moveCandidate = useCallback(
-    (id: string, toStage: StageKey, toIndex: number) => {
-      setCandidates((prev) => {
-        const subjectIndex = prev.findIndex((c) => c.id === id);
-        if (subjectIndex < 0) return prev;
-        const subject = prev[subjectIndex];
-        if (subject.archived) return prev;
-
-        const without = prev.filter((_, i) => i !== subjectIndex);
-        const updated: Candidate = { ...subject, stage: toStage };
-
-        let count = 0;
-        let absInsertAt = without.length;
-        for (let i = 0; i < without.length; i++) {
-          const c = without[i];
-          if (!c.archived && c.stage === toStage) {
-            if (count === toIndex) {
-              absInsertAt = i;
-              break;
-            }
-            count++;
-          }
-        }
-        return [
-          ...without.slice(0, absInsertAt),
-          updated,
-          ...without.slice(absInsertAt),
-        ];
+    const groupMap = new Map<string, EventRow[]>();
+    for (const e of sorted) {
+      const month = e.date.slice(0, 7); // "2026-05"
+      if (!groupMap.has(month)) groupMap.set(month, []);
+      groupMap.get(month)!.push({
+        id: e.id,
+        date: e.date,
+        caption: e.caption,
+        imageUrl: e.imageUrl,
+        childIds: e.childIds,
+        categoryIds: e.categoryIds,
       });
+    }
+
+    return Array.from(groupMap.entries()).map(([month, items]) => ({
+      month,
+      label: formatMonthLabel(month),
+      items,
+    }));
+  }, [filteredEvents]);
+
+  // 現在表示中の月（最新グループの月、または今月）
+  const currentMonth = useMemo(() => {
+    if (monthGroups.length > 0) return monthGroups[0].month;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  }, [monthGroups]);
+
+  // --- イベントハンドラー ---
+
+  const updateEvent = useCallback(
+    (id: string, patch: Partial<FamilyEvent>) => {
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, ...patch } : e)),
+      );
     },
     [],
   );
 
-  const addDepartment = useCallback((name: string) => {
-    setDepartments((prev) => [
-      ...prev,
-      { id: `d-${Date.now()}`, name, positions: [] },
-    ]);
+  const addEvent = useCallback((caption: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const newEvent = createMinimalEvent(today, caption);
+    setEvents((prev) => [newEvent, ...prev]);
+    setSelectedEventId(newEvent.id);
   }, []);
 
-  const deleteDepartment = useCallback((deptId: string) => {
-    setDepartments((prev) => prev.filter((d) => d.id !== deptId));
+  const addChild = useCallback((name: string, emoji: string) => {
+    const newChild: Child = {
+      id: `child-${Date.now()}`,
+      name,
+      emoji,
+      birthdate: "",
+    };
+    setChildren((prev) => [...prev, newChild]);
   }, []);
 
-  const addPosition = useCallback((deptId: string, posName: string) => {
-    setDepartments((prev) =>
-      prev.map((d) =>
-        d.id === deptId
-          ? {
-              ...d,
-              positions: [
-                ...d.positions,
-                { id: `p-${Date.now()}`, name: posName, count: 0 },
-              ],
-            }
-          : d,
-      ),
-    );
+  const deleteChild = useCallback((id: string) => {
+    setChildren((prev) => prev.filter((c) => c.id !== id));
+    setSelectedChildId((prev) => (prev === id ? null : prev));
   }, []);
 
-  const deletePosition = useCallback((deptId: string, posId: string) => {
-    setDepartments((prev) =>
-      prev.map((d) =>
-        d.id === deptId
-          ? { ...d, positions: d.positions.filter((p) => p.id !== posId) }
-          : d,
-      ),
-    );
+  const addCategory = useCallback((label: string, emoji: string) => {
+    const newCat: Category = {
+      id: `cat-${Date.now()}`,
+      label,
+      emoji,
+    };
+    setCategories((prev) => [...prev, newCat]);
   }, []);
 
-  // 評価観点 ★ の編集ハンドラ。フェーズ 3A から「アクティブ候補者」の
-  // scorecards を更新する形に変更（candidates 配列の中の該当候補者だけを差し替え）。
-  const updateAxisScore = useCallback(
-    (stage: StageKey, axis: AxisKey, value: number | null) => {
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.id === selectedCandidateId
-            ? {
-                ...c,
-                scorecards: c.scorecards.map((s) =>
-                  s.stage === stage
-                    ? { ...s, axisScores: { ...s.axisScores, [axis]: value } }
-                    : s,
-                ),
-              }
-            : c,
-        ),
-      );
-    },
-    [selectedCandidateId],
-  );
+  const deleteCategory = useCallback((id: string) => {
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    setSelectedCategoryId((prev) => (prev === id ? null : prev));
+  }, []);
 
-  // Pane 4 モード 2「メタ情報」の inline edit から呼ばれる。
-  // `decision` だけ undefined を許すため、空文字は undefined として扱う
-  // （`MetaRow` 廃止前の "未判定" 表示の代替: `EditableFieldRow` 側で空 = "未設定"）。
-  // フェーズ 3A: アクティブ候補者の scorecards を更新する形に変更。
-  const updateScorecardField = useCallback(
-    (stage: StageKey, field: EditableScorecardKey, value: string) => {
-      setCandidates((prev) =>
-        prev.map((c) =>
-          c.id === selectedCandidateId
-            ? {
-                ...c,
-                scorecards: c.scorecards.map((s) => {
-                  if (s.stage !== stage) return s;
-                  if (field === "decision") {
-                    const trimmed = value.trim();
-                    return {
-                      ...s,
-                      decision: trimmed === "" ? undefined : trimmed,
-                    };
-                  }
-                  return { ...s, [field]: value };
-                }),
-              }
-            : c,
-        ),
-      );
-    },
-    [selectedCandidateId],
-  );
+  const togglePane4 = useCallback(() => setPane4Open((v) => !v), []);
 
-  // Pane 4 内の `useEffect` 依存安定化のため、Workspace 側でメモ化して props で渡す。
-  const consumeScrollAnchor = useCallback(() => setScrollAnchor(null), []);
-  const togglePane4 = useCallback(() => setPane4ManuallyClosed((v) => !v), []);
-
-  const positionTitle = "フロントエンドエンジニア";
-  const departmentTitle = "プロダクト開発";
-
-  const candidateGroups: Group[] = useMemo(() => {
-    // ステージグループは常に 4 段階すべて表示する。空ステージも残すことで、
-    // 「最後の 1 名を別ステージへ動かしたら戻し先が消える」事故を防ぐ
-    // （ADR-006 §2-2 の補足）。
-    const stageGroups: Group[] = STAGE_ORDER.map((stage) => ({
-      kind: "stage" as const,
-      stage,
-      label: STAGE_LABELS[stage],
-      items: candidates
-        .filter((c) => !c.archived && c.stage === stage)
-        .map((c) => ({
-          id: c.id,
-          name: c.profile.name,
-          averageScore: getCandidateAverageScore(c),
-        })),
-    }));
-
-    const archivedItems = candidates
-      .filter((c) => c.archived)
-      .map((c) => ({
-        id: c.id,
-        name: c.profile.name,
-        averageScore: getCandidateAverageScore(c),
-      }));
-
-    if (archivedItems.length === 0) return stageGroups;
-    return [
-      ...stageGroups,
-      { kind: "archived" as const, label: ARCHIVED_GROUP_LABEL, items: archivedItems },
-    ];
-  }, [candidates]);
+  // ヘッダーのフィルターラベル
+  const filterLabel = selectedChildId
+    ? (children.find((c) => c.id === selectedChildId)?.name ?? ALL_CHILDREN_LABEL)
+    : selectedCategoryId
+      ? (categories.find((c) => c.id === selectedCategoryId)?.label ??
+        ALL_CHILDREN_LABEL)
+      : ALL_CHILDREN_LABEL;
 
   return (
-    // shadcn/ui の SidebarProvider が外側を取り、Pane 1 (`<Sidebar>`) を全高で固定
-    // 表示する。SidebarInset が右側ブロック（GlobalHeader + Pane 2/3/4）を担う。
-    // Cmd+B のキーバインドは SidebarProvider 側で標準実装されている。
-    // SidebarProvider のラッパー div は既定 `min-h-svh w-full`。雛形では
-    // ビューポート高に固定したいので h-screen を併記し、ペイン内で min-h-0 が
-    // 効くようにする（既存 ScrollArea の挙動と整合）。
-    <SidebarProvider
-      defaultOpen
-      className="h-screen w-full overflow-hidden bg-background text-foreground"
-    >
-      <PositionPane
-        workspaceName={workspace.name}
-        departments={departments}
-        selectedPositionName={positionTitle}
-        onAddPosition={addPosition}
-        onDeletePosition={deletePosition}
-      />
-      <SidebarInset className="flex min-w-0 flex-col bg-background">
-        <GlobalHeader
-          departmentTitle={departmentTitle}
-          positionTitle={positionTitle}
-          candidateName={profile.name}
-          departments={departments}
-          onAddDepartment={addDepartment}
-          onDeleteDepartment={deleteDepartment}
+    <>
+      <SidebarProvider
+        defaultOpen
+        className="h-screen w-full overflow-hidden bg-background text-foreground"
+      >
+        <FamilyPane
+          workspaceName={workspace.name}
+          children={children}
+          categories={categories}
+          selectedChildId={selectedChildId}
+          selectedCategoryId={selectedCategoryId}
+          onSelectChild={setSelectedChildId}
+          onSelectCategory={setSelectedCategoryId}
+          onAddChild={addChild}
+          onDeleteChild={deleteChild}
+          onAddCategory={addCategory}
+          onDeleteCategory={deleteCategory}
         />
-        {/* SidebarInset 自体が <main> を出すので、内側は <div> で組み、
-            Pane 2 / Pane 3 / Pane 4 を横並びにする。 */}
-        <div className="flex min-h-0 flex-1">
-          <CandidateListPane
-            groups={candidateGroups}
-            selectedCandidateId={selectedCandidateId}
-            onSelectCandidate={selectCandidate}
-            onAddCandidate={addCandidate}
-            onArchiveCandidate={archiveCandidate}
-            onRestoreCandidate={restoreCandidate}
-            onMoveCandidate={moveCandidate}
+        <SidebarInset className="flex min-w-0 flex-col bg-background">
+          <GlobalHeader
+            workspaceName={workspace.name}
+            filterLabel={filterLabel}
+            eventCaption={activeEvent?.caption ?? "イベント未選択"}
           />
-          <CandidateDashboardPane
-            profile={profile}
-            scorecards={scorecards}
-            selectedDetail={selectedDetail}
-            onOpenDetail={openDetail}
-            setProfile={setProfile}
-            applicationInfoOpen={applicationInfoOpen}
-            onApplicationInfoOpenChange={setApplicationInfoOpen}
-            selectedCandidateId={selectedCandidateId}
-          />
-          <CandidateDetailPane
-            selectedCandidateId={selectedCandidateId}
-            scorecards={scorecards}
-            selectedDetail={selectedDetail}
-            scrollAnchor={scrollAnchor}
-            onScrollAnchorConsumed={consumeScrollAnchor}
-            onUpdateAxis={updateAxisScore}
-            onUpdateScorecardField={updateScorecardField}
-            pane4Open={pane4Open}
-            onTogglePane4={togglePane4}
-          />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+          <div className="flex min-h-0 flex-1">
+            <EventListPane
+              groups={monthGroups}
+              children={children}
+              categories={categories}
+              selectedEventId={selectedEventId}
+              onSelectEvent={setSelectedEventId}
+              onAddEvent={() => setAddEventOpen(true)}
+            />
+            <EventDetailPane
+              event={activeEvent}
+              children={children}
+              categories={categories}
+              onUpdateEvent={updateEvent}
+            />
+            <AiSummaryPane
+              pane4Open={pane4Open}
+              onTogglePane4={togglePane4}
+              events={filteredEvents}
+              children={children}
+              currentMonth={currentMonth}
+            />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+
+      {/* イベント追加ダイアログ */}
+      <AddItemDialog
+        open={addEventOpen}
+        onOpenChange={setAddEventOpen}
+        title="イベントを追加"
+        description="今日のちょっとした出来事を記録しましょう"
+        fieldLabel="一言キャプション"
+        fieldId="event-caption"
+        placeholder="例: 公園で初めて鉄棒できた！"
+        onAdd={addEvent}
+      />
+    </>
   );
 }

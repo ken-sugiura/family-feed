@@ -1,0 +1,117 @@
+[
+  {
+    "id": "e-001",
+    "date": "2026-05-23",
+    "imageUrl": "",
+    "caption": "公園で次男が初めて滑り台！「ぴゅーん！」って言ってた",
+    "childIds": ["child-2"],
+    "categoryIds": ["cat-first", "cat-daily"],
+    "memo": "近所の公園に行ったら怖がらずに一人で滑り台に挑戦した。ニコニコしながら5回くらい繰り返してた。",
+    "height": 80.5,
+    "weight": 10.2
+  },
+  {
+    "id": "e-002",
+    "date": "2026-05-20",
+    "imageUrl": "",
+    "caption": "長男、自転車の補助輪が外れた！",
+    "childIds": ["child-1"],
+    "categoryIds": ["cat-first"],
+    "memo": "朝から「今日こそ！」とやる気満々。お父さんが支えなくても10メートルくらい走れた。本人も相当嬉しそうだった。",
+    "height": 112.0,
+    "weight": 19.5
+  },
+  {
+    "id": "e-003",
+    "date": "2026-05-10",
+    "imageUrl": "",
+    "caption": "こどもの日に家族みんなで柏餅を作った",
+    "childIds": ["child-1", "child-2"],
+    "categoryIds": ["cat-family"],
+    "memo": "長男は生地こねを担当、次男は見学。柏の葉を「葉っぱ！」と言って喜んでいた。"
+  },
+  {
+    "id": "e-004",
+    "date": "2026-04-28",
+    "imageUrl": "",
+    "caption": "次男、初めてスプーンで自分でごはんが食べられた",
+    "childIds": ["child-2"],
+    "categoryIds": ["cat-first"],
+    "memo": "少しこぼしたけど最後まで自分でやり切った。「できた！」と言ってガッツポーズ。",
+    "height": 79.8,
+    "weight": 10.0
+  },
+  {
+    "id": "e-005",
+    "date": "2026-04-18",
+    "imageUrl": "",
+    "caption": "長男の参観日。算数の発表でしっかり手を挙げていた",
+    "childIds": ["child-1"],
+    "categoryIds": ["cat-school"],
+    "memo": "先生から「積極的に参加しています」とコメントをもらった。帰り道、ラーメンを食べに行った。"
+  },
+  {
+    "id": "e-006",
+    "date": "2026-04-07",
+    "imageUrl": "",
+    "caption": "次男、9か月健診。身長・体重ともに順調",
+    "childIds": ["child-2"],
+    "categoryIds": ["cat-hospital"],
+    "memo": "身長 79cm、体重 9.8kg。先生から「よく動く子ですね」と言われた。",
+    "height": 79.0,
+    "weight": 9.8
+  },
+  {
+    "id": "e-007",
+    "date": "2026-04-01",
+    "imageUrl": "",
+    "caption": "長男、2年生に進級！ランドセルの赤ちゃんみたいに見えた頃が懐かしい",
+    "childIds": ["child-1"],
+    "categoryIds": ["cat-school"],
+    "memo": "担任の先生が変わって少し緊張していたけど、新しいクラスに同じ友達がいて安心した様子。"
+  },
+  {
+    "id": "e-008",
+    "date": "2026-03-25",
+    "imageUrl": "",
+    "caption": "家族でお花見。長男は桜の花びらで遊んでた",
+    "childIds": ["child-1", "child-2"],
+    "categoryIds": ["cat-family"],
+    "memo": "天気が良くて最高のお花見日和。次男はずっとニコニコしてた。おにぎり持参で3時間くらいいた。"
+  },
+  {
+    "id": "e-009",
+    "date": "2026-03-19",
+    "imageUrl": "",
+    "caption": "長男の1年生修了式。1年間よくがんばりました！",
+    "childIds": ["child-1"],
+    "categoryIds": ["cat-school"]
+  },
+  {
+    "id": "e-010",
+    "date": "2026-02-14",
+    "imageUrl": "",
+    "caption": "バレンタイン。長男が友チョコをたくさんもらってきた",
+    "childIds": ["child-1"],
+    "categoryIds": ["cat-daily"],
+    "memo": "クラスの子から手作りチョコをもらったと照れながら帰ってきた。"
+  },
+  {
+    "id": "e-011",
+    "date": "2026-01-01",
+    "imageUrl": "",
+    "caption": "あけましておめでとう！家族みんなで初日の出を見た",
+    "childIds": ["child-1", "child-2"],
+    "categoryIds": ["cat-family"],
+    "memo": "近くの神社に初詣。長男はおみくじで大吉を引いて大喜びだった。次男はずっと抱っこ。"
+  },
+  {
+    "id": "e-012",
+    "date": "2025-12-25",
+    "imageUrl": "",
+    "caption": "メリークリスマス！サンタからプレゼントが届いた",
+    "childIds": ["child-1", "child-2"],
+    "categoryIds": ["cat-family"],
+    "memo": "長男はレゴを、次男はおもちゃのピアノをもらった。"
+  }
+]

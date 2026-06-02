@@ -1,0 +1,79 @@
+---
+description: shadcn/ui (base-nova / Base UI) のコーディング規約。components/ 配下のファイルを編集するときに自動適用。
+globs: components/**/*.tsx, app/**/*.tsx
+alwaysApply: false
+---
+
+# shadcn idiom — コーディング規約
+
+このプロジェクトは shadcn/ui の **base スタイル（Base UI ベース）** を使用している。
+`components.json` の `"style": "base-nova"` がその証拠。
+
+## 禁止事項（必ず守る）
+
+| 禁止 | 代わりに使う | 理由 |
+|------|-------------|------|
+| `space-y-*` / `space-x-*` | `flex flex-col gap-*` / `flex gap-*` | 子が条件で消えると余白が崩れる |
+| `bg-blue-500` などの生の色クラス | `bg-primary` など semantic token | テーマ変更時に全ファイル書き換えになる |
+| `w-N h-N`（正方形） | `size-N` | 正方形の意図が明確になる |
+| `asChild`（Radix の API） | `render`（Base UI の API） | このプロジェクトは Base UI 使用。`asChild` は動かない |
+| shadcn 部品がある場面での自前 div | `Badge` / `Separator` / `Skeleton` 等 | a11y・ダークモード・テーマ連動が組み込み済み |
+| 呼び出し側で `className` で色・フォントを上書き | 部品側に variant を追加 | コピペが蔓延しダークモード対応漏れが起きる |
+
+## よくある誤りパターン（必ず確認）
+
+```tsx
+// NG — Radix の書き方は Base UI では動かない
+<DialogTrigger asChild>
+  <Button variant="outline">開く</Button>
+</DialogTrigger>
+
+// OK — Base UI の API
+<DialogTrigger render={<Button variant="outline" />}>
+  開く
+</DialogTrigger>
+```
+
+## 色はすべて semantic token で指定する
+
+`globals.css` の `@theme` に定義された CSS 変数のみ使う。
+
+```tsx
+// NG
+<div className="bg-blue-500 text-white">
+
+// OK
+<div className="bg-primary text-primary-foreground">
+```
+
+## 余白は親が管理する
+
+```tsx
+// NG — 子が消えると空白が残る
+<div>
+  <Item className="mb-4" />
+  <Item className="mb-4" />
+</div>
+
+// OK — 子が何個でも安定
+<div className="flex flex-col gap-4">
+  <Item />
+  <Item />
+</div>
+```
+
+## components/ui/ の編集方針
+
+shadcn の Open Code 思想により、`components/ui/` は**プロジェクトのコード**として編集してよい。
+
+- **OK**: 部品に新しい variant を追加する
+- **OK**: `globals.css` に CSS 変数を追加して部品から参照する
+- **NG**: 呼び出し側で毎回 `className` で打ち消す
+- **NG**: 部品ファイルをコピーして別名で作る
+
+## 出力後セルフレビュー（コード生成のたびに確認）
+
+1. 余白は親管理（`gap-*`）か？ `space-y-*` を使っていないか？
+2. 色は semantic token か？ 生の色クラスを使っていないか？
+3. `asChild` ではなく `render` を使っているか？
+4. shadcn 部品で代替できる場面で自前 div を作っていないか？

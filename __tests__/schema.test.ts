@@ -1,23 +1,30 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  candidatesSchema,
-  departmentsSchema,
+  childrenSchema,
+  categoriesSchema,
+  eventsSchema,
   workspaceSchema,
 } from "@/lib/schema";
 
-import positionsData from "@/data/positions.json";
-import candidatesData from "@/data/candidates.json";
+import childrenData from "@/data/children.json";
+import categoriesData from "@/data/categories.json";
+import eventsData from "@/data/events.json";
 import workspaceData from "@/data/workspace.json";
 
 describe("data/*.json schema validation", () => {
-  it("data/positions.json は departmentsSchema を満たす", () => {
-    const result = departmentsSchema.safeParse(positionsData);
+  it("data/children.json は childrenSchema を満たす", () => {
+    const result = childrenSchema.safeParse(childrenData);
     expect(result.success).toBe(true);
   });
 
-  it("data/candidates.json は candidatesSchema を満たす", () => {
-    const result = candidatesSchema.safeParse(candidatesData);
+  it("data/categories.json は categoriesSchema を満たす", () => {
+    const result = categoriesSchema.safeParse(categoriesData);
+    expect(result.success).toBe(true);
+  });
+
+  it("data/events.json は eventsSchema を満たす", () => {
+    const result = eventsSchema.safeParse(eventsData);
     expect(result.success).toBe(true);
   });
 
@@ -28,33 +35,15 @@ describe("data/*.json schema validation", () => {
 });
 
 describe("schema rejects invalid data", () => {
-  it("departmentsSchema は配列を期待する", () => {
-    expect(departmentsSchema.safeParse({}).success).toBe(false);
-    expect(departmentsSchema.safeParse(null).success).toBe(false);
+  it("childrenSchema は配列を期待する", () => {
+    expect(childrenSchema.safeParse({}).success).toBe(false);
+    expect(childrenSchema.safeParse(null).success).toBe(false);
   });
 
-  it("candidate は stage が StageKey でないと不可", () => {
+  it("familyEvent は date と caption が必須", () => {
     expect(
-      candidatesSchema.safeParse([
-        {
-          id: "x",
-          profile: {
-            name: "x",
-            birthday: "",
-            source: "",
-            email: "",
-            phone: "",
-            address: "",
-            recruiter: "",
-            desiredSalaryMin: "",
-            desiredSalaryMax: "",
-            availableStartDate: "",
-            careerText: "",
-            motivationFull: "",
-          },
-          scorecards: [],
-          stage: "unknown-stage",
-        },
+      eventsSchema.safeParse([
+        { id: "x", childIds: [], categoryIds: [] },
       ]).success,
     ).toBe(false);
   });
@@ -65,49 +54,27 @@ describe("schema rejects invalid data", () => {
   });
 });
 
-describe("candidate.archived の取り扱い", () => {
-  const baseCandidate = {
-    id: "c-archived-test",
-    profile: {
-      name: "テスト 太郎",
-      birthday: "",
-      source: "",
-      email: "",
-      phone: "",
-      address: "",
-      recruiter: "",
-      desiredSalaryMin: "",
-      desiredSalaryMax: "",
-      availableStartDate: "",
-      careerText: "",
-      motivationFull: "",
-    },
-    scorecards: [],
-    stage: "screening" as const,
+describe("familyEvent のオプションフィールド", () => {
+  const baseEvent = {
+    id: "e-test",
+    date: "2026-05-01",
+    caption: "テストイベント",
+    childIds: [],
+    categoryIds: [],
   };
 
-  it("archived 未指定なら false がデフォルトで埋まる", () => {
-    const result = candidatesSchema.safeParse([baseCandidate]);
+  it("imageUrl なしで valid", () => {
+    const result = eventsSchema.safeParse([baseEvent]);
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data[0].archived).toBe(false);
-    }
   });
 
-  it("archived: true を許容する", () => {
-    const result = candidatesSchema.safeParse([
-      { ...baseCandidate, archived: true },
+  it("height / weight あり で valid", () => {
+    const result = eventsSchema.safeParse([
+      { ...baseEvent, height: 110.5, weight: 18.2 },
     ]);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data[0].archived).toBe(true);
+      expect(result.data[0].height).toBe(110.5);
     }
-  });
-
-  it("archived が boolean でなければ不可", () => {
-    const result = candidatesSchema.safeParse([
-      { ...baseCandidate, archived: "yes" },
-    ]);
-    expect(result.success).toBe(false);
   });
 });

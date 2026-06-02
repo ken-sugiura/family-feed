@@ -1,0 +1,78 @@
+---
+description: workspace-ui-kit の UI 変更・ペイン編集・コンポーネント追加・色変更・レイアウト調整を行うときに適用するデザイン規律。
+globs: components/workspace/**/*.tsx, components/primitives/**/*.tsx, app/**/*.tsx
+alwaysApply: false
+---
+
+# workspace-ui-kit デザイン規律
+
+## 作業前に必ず確認するチェックリスト
+
+コード生成を始める前に、以下を全て確認する（スキップ禁止）:
+
+```
+SSoT 把握:
+- [ ] app/globals.css を読み、既存の semantic token を列挙した
+- [ ] components/ui/ を ls し、利用可能な shadcn 部品を列挙した
+- [ ] components/primitives/ を ls し、Inline* 等のプロジェクト固有部品を列挙した
+- [ ] openspec/decision/ を ls し、関連する ADR を読了した
+```
+
+## SSoT（唯一の正本）を経由しないデザイン変更は禁止
+
+画面の SSoT は `components/workspace/Workspace.tsx`。
+ADR と実装が矛盾したら ADR が正しい。実装を追従させる。
+
+### 既存 SSoT で作れないときの4分岐
+
+既存のトークン・部品・パターンで作れないものが出てきたら、コードを書かずに必ずユーザーに確認する。
+
+| 分岐 | 状況 | やること |
+|------|------|---------|
+| **3a トークンの穴** | 色・余白・角丸の値が足りない | `@theme` への追加案を提示 → ユーザー確認 |
+| **3b 部品の穴** | 既存部品の variant で表現できない | 新 variant / 新プリミティブを起案 → ユーザー確認 |
+| **3c パターンの穴** | レイアウト・状態（empty/error/loading）の規律がない | ADR を確認 → 規律案を起案 → ユーザー確認 |
+| **3d 情報設計の穴** | ペインに何を載せるか決まっていない | **コードを書かない**。何を載せるか質問する |
+
+**いずれの分岐でも、ユーザーの判断なしに実装に進まない。**
+
+## ペインの責務分離
+
+- **Pane 3 = 読む場所**（カードに inline 編集 UI を新たに置かない）
+- **Pane 4 = 編集の本拠地**（編集機能はここに置く）
+
+## インライン編集プリミティブ
+
+`components/primitives/` の既存 `Inline*` プリミティブを再利用する。
+新しい編集 UI の流派を独自に増やさない。
+
+**導入禁止の編集 UI**:
+- 鉛筆アイコン式
+- 「編集」ボタン式
+- フォーム・モーダル一括編集式
+
+**入力保存規約**:
+- 1行 `input`: Enter で保存 / Esc でキャンセル / blur で保存
+- 複数行 `textarea`: Cmd+Enter で保存 / Esc でキャンセル / blur で保存
+- ホバー時のみ薄い枠を出す（常時の枠は出さない）
+
+## 角丸（border-radius）の4ルール
+
+1. **親 R ≧ 子 R** — 親より大きな R を子に付けない
+2. **同格の島は同じ R** — `bg-card` で囲った島は原則 `rounded-lg`（Card 本体のみ `rounded-xl`）
+3. **厳密な同心は求めない** — Tailwind スケールで段差が見えれば十分
+4. **高密度 UI の例外** — 行密度を上げるとき島を `rounded-md` に下げてよい（ルール1を維持）
+
+## React 19 ルール
+
+- `useEffect` 内で同期的に `setState` して初期値を入れ直すパターン禁止
+- 代替: 親で `key` を変えて再マウント / `useState(initialValue)` で初期化
+- フォーカス+全選択は `autoFocus` + `onFocus={(e) => e.target.select()}` で実現
+
+## shadcn 部品の更新
+
+```bash
+npx shadcn@latest add <component> --diff
+```
+
+`--overwrite` はユーザーの明示許可なしに使わない（独自 variant が消えるため）。
