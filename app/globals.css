@@ -80,39 +80,44 @@
 }
 
 :root {
-  --background: oklch(0.9701 0.0041 91.4464);
-  --foreground: oklch(0.2354 0.0019 286.2536);
-  --card: oklch(0.9972 0.0028 84.5587);
-  --card-foreground: oklch(0.2354 0.0019 286.2536);
-  --canvas: oklch(0.985 0.005 84);
-  --popover: oklch(0.9972 0.0028 84.5587);
-  --popover-foreground: oklch(0.2354 0.0019 286.2536);
-  --primary: oklch(0.3732 0.0635 258.276);
-  --primary-foreground: oklch(0.9816 0.0017 247.839);
-  --secondary: oklch(0.9526 0.0058 84.5665);
-  --secondary-foreground: oklch(0.3732 0.0635 258.276);
-  --muted: oklch(0.9468 0.0046 78.2976);
-  --muted-foreground: oklch(0.522 0.004 67.7376);
-  --accent: oklch(0.9526 0.0058 84.5665);
-  --accent-foreground: oklch(0.3732 0.0635 258.276);
+  /* ===== Sage & Stone テーマ（ライトモード） =====
+   * アクセント: セージグリーン (OKLCH hue ≈ 148)
+   * ベース: ニュートラルストーン（背景は極薄セージ）
+   * サイドバー: ベースより少し曇って層次感を出す
+   */
+  --background: oklch(0.972 0.006 148);
+  --foreground: oklch(0.22 0.018 148);
+  --card: oklch(0.995 0.003 148);
+  --card-foreground: oklch(0.22 0.018 148);
+  --canvas: oklch(0.985 0.004 148);
+  --popover: oklch(0.995 0.003 148);
+  --popover-foreground: oklch(0.22 0.018 148);
+  --primary: oklch(0.42 0.09 148);
+  --primary-foreground: oklch(0.972 0.006 148);
+  --secondary: oklch(0.940 0.015 148);
+  --secondary-foreground: oklch(0.42 0.09 148);
+  --muted: oklch(0.940 0.010 148);
+  --muted-foreground: oklch(0.52 0.015 148);
+  --accent: oklch(0.940 0.015 148);
+  --accent-foreground: oklch(0.42 0.09 148);
   --destructive: oklch(0.5624 0.0956 20.5303);
-  --border: oklch(0.9251 0.0071 88.645);
-  --input: oklch(0.9251 0.0071 88.645);
-  --ring: oklch(0.3732 0.0635 258.276);
-  --chart-1: oklch(0.6318 0.06 244.8148);
-  --chart-2: oklch(0.6441 0.0496 146.8813);
-  --chart-3: oklch(0.719 0.1077 74.6093);
-  --chart-4: oklch(0.7107 0.0351 256.7878);
-  --chart-5: oklch(0.7118 0.0129 286.0665);
+  --border: oklch(0.905 0.022 148);
+  --input: oklch(0.905 0.022 148);
+  --ring: oklch(0.42 0.09 148);
+  --chart-1: oklch(0.52 0.10 148);
+  --chart-2: oklch(0.62 0.09 195);
+  --chart-3: oklch(0.68 0.10 100);
+  --chart-4: oklch(0.58 0.08 230);
+  --chart-5: oklch(0.65 0.07 60);
   --radius: 0.625rem;
-  --sidebar: oklch(0.9526 0.0058 84.5665);
-  --sidebar-foreground: oklch(0.2354 0.0019 286.2536);
-  --sidebar-primary: oklch(0.3732 0.0635 258.276);
-  --sidebar-primary-foreground: oklch(0.9816 0.0017 247.839);
-  --sidebar-accent: oklch(0.9251 0.0071 88.645);
-  --sidebar-accent-foreground: oklch(0.3732 0.0635 258.276);
-  --sidebar-border: oklch(0.9039 0.0029 84.5597);
-  --sidebar-ring: oklch(0.3732 0.0635 258.276);
+  --sidebar: oklch(0.945 0.018 148);
+  --sidebar-foreground: oklch(0.22 0.018 148);
+  --sidebar-primary: oklch(0.42 0.09 148);
+  --sidebar-primary-foreground: oklch(0.972 0.006 148);
+  --sidebar-accent: oklch(0.912 0.026 148);
+  --sidebar-accent-foreground: oklch(0.22 0.018 148);
+  --sidebar-border: oklch(0.888 0.028 148);
+  --sidebar-ring: oklch(0.42 0.09 148);
   --destructive-foreground: oklch(1 0 0);
   --font-sans:
     var(--font-inter), "Hiragino Sans", "BIZ UDPGothic", "Yu Gothic UI",
@@ -144,38 +149,43 @@
 }
 
 .dark {
-  --background: oklch(0.2252 0.0049 248.0473);
-  --foreground: oklch(0.9168 0.0035 67.7802);
-  --card: oklch(0.2668 0.0071 248.094);
-  --card-foreground: oklch(0.9168 0.0035 67.7802);
-  --canvas: oklch(0.246 0.006 248.07);
-  --popover: oklch(0.2668 0.0071 248.094);
-  --popover-foreground: oklch(0.9168 0.0035 67.7802);
-  --primary: oklch(0.7441 0.1311 264.2789);
-  --primary-foreground: oklch(0.2077 0.0398 265.7549);
-  --secondary: oklch(0.2972 0 0);
-  --secondary-foreground: oklch(0.9168 0.0035 67.7802);
-  --muted: oklch(0.2972 0 0);
-  --muted-foreground: oklch(0.709 0 0);
-  --accent: oklch(0.2972 0 0);
-  --accent-foreground: oklch(0.9168 0.0035 67.7802);
+  /* ===== Sage & Stone テーマ（ダークモード） =====
+   * ベース: 深いセージチャコール
+   * サイドバー: ベースよりさらに暗くして奥行きを出す
+   * プライマリ: 明るいセージ（暗い背景上で視認性を確保）
+   */
+  --background: oklch(0.188 0.014 148);
+  --foreground: oklch(0.918 0.010 148);
+  --card: oklch(0.225 0.016 148);
+  --card-foreground: oklch(0.918 0.010 148);
+  --canvas: oklch(0.205 0.015 148);
+  --popover: oklch(0.225 0.016 148);
+  --popover-foreground: oklch(0.918 0.010 148);
+  --primary: oklch(0.68 0.115 148);
+  --primary-foreground: oklch(0.16 0.014 148);
+  --secondary: oklch(0.268 0.014 148);
+  --secondary-foreground: oklch(0.918 0.010 148);
+  --muted: oklch(0.268 0.014 148);
+  --muted-foreground: oklch(0.64 0.010 148);
+  --accent: oklch(0.268 0.014 148);
+  --accent-foreground: oklch(0.918 0.010 148);
   --destructive: oklch(0.6338 0.1208 21.0422);
-  --border: oklch(0.3211 0 0);
-  --input: oklch(0.3211 0 0);
-  --ring: oklch(0.7441 0.1311 264.2789);
-  --chart-1: oklch(0.6318 0.06 244.8148);
-  --chart-2: oklch(0.6441 0.0496 146.8813);
-  --chart-3: oklch(0.719 0.1077 74.6093);
-  --chart-4: oklch(0.7107 0.0351 256.7878);
-  --chart-5: oklch(0.7118 0.0129 286.0665);
-  --sidebar: oklch(0.1989 0.0051 248.0841);
-  --sidebar-foreground: oklch(0.9168 0.0035 67.7802);
-  --sidebar-primary: oklch(0.7441 0.1311 264.2789);
-  --sidebar-primary-foreground: oklch(0.2077 0.0398 265.7549);
-  --sidebar-accent: oklch(0.2972 0 0);
-  --sidebar-accent-foreground: oklch(0.9168 0.0035 67.7802);
-  --sidebar-border: oklch(0.3211 0 0);
-  --sidebar-ring: oklch(0.7441 0.1311 264.2789);
+  --border: oklch(0.308 0.014 148);
+  --input: oklch(0.308 0.014 148);
+  --ring: oklch(0.68 0.115 148);
+  --chart-1: oklch(0.68 0.115 148);
+  --chart-2: oklch(0.65 0.09 195);
+  --chart-3: oklch(0.72 0.10 100);
+  --chart-4: oklch(0.62 0.08 230);
+  --chart-5: oklch(0.68 0.07 60);
+  --sidebar: oklch(0.158 0.012 148);
+  --sidebar-foreground: oklch(0.918 0.010 148);
+  --sidebar-primary: oklch(0.68 0.115 148);
+  --sidebar-primary-foreground: oklch(0.16 0.014 148);
+  --sidebar-accent: oklch(0.248 0.012 148);
+  --sidebar-accent-foreground: oklch(0.918 0.010 148);
+  --sidebar-border: oklch(0.288 0.012 148);
+  --sidebar-ring: oklch(0.68 0.115 148);
   --destructive-foreground: oklch(1 0 0);
   --radius: 0.625rem;
   --font-sans:
