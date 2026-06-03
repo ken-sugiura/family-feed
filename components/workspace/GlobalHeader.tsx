@@ -7,11 +7,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { ThemeToggle } from "@/components/workspace/ThemeToggle";
 
 type GlobalHeaderProps = {
   workspaceName: string;
-  filterLabel: string;     // 例: "すべて" or "長男"
-  eventCaption: string;    // 例: "公園で次男が..." or "イベント未選択"
+  filterLabel: string;
+  eventCaption: string;
 };
 
 export function GlobalHeader({
@@ -41,6 +42,7 @@ export function GlobalHeader({
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+      <ThemeToggle />
     </header>
   );
 }
