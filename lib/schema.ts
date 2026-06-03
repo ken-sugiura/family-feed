@@ -42,14 +42,22 @@ export type Category = z.infer<typeof categorySchema>;
  */
 export const familyEventSchema = z.object({
   id: z.string(),
-  date: z.string(),
-  imageUrl: z.string().optional(),
-  caption: z.string(),
+  /** YYYY-MM-DD 形式。空文字・不正フォーマットは拒否する。 */
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date は YYYY-MM-DD 形式で入力してください"),
+  /**
+   * 外部画像 URL（Amazon Photos の共有リンク等）。
+   * 空文字はパース時に undefined として正規化する。
+   */
+  imageUrl: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().optional(),
+  ),
+  caption: z.string().min(1, "一言キャプションは必須です"),
   childIds: z.array(z.string()),
   categoryIds: z.array(z.string()),
   memo: z.string().optional(),
-  height: z.number().optional(),
-  weight: z.number().optional(),
+  height: z.number().positive().optional(),
+  weight: z.number().positive().optional(),
 });
 export type FamilyEvent = z.infer<typeof familyEventSchema>;
 

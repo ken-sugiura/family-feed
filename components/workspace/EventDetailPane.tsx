@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * EventDetailPane — イベント詳細表示 + インライン編集（Pane 3）。
+ *
+ * [設計メモ] workspace-design.mdc は「Pane 3 = 閲覧 / Pane 4 = 編集」を原則とするが、
+ * ファミリーフィードではユーザーが投稿と同時に詳細を確認・修正する UX が中心のため、
+ * このペインに InlineTextField 等の編集 UI を置くことを意図的に選択している。
+ * Pane 4 は AI サマリー専用として責務を分離済み。
+ */
+
 import { Image } from "lucide-react";
 
 import {
@@ -45,6 +54,10 @@ export function EventDetailPane({
   const patch = (field: keyof FamilyEvent) => (value: string) =>
     onUpdateEvent(event.id, { [field]: value });
 
+  // imageUrl は空文字を undefined として保存する（スキーマの transform と同様に正規化）
+  const patchImageUrl = (value: string) =>
+    onUpdateEvent(event.id, { imageUrl: value.trim() || undefined });
+
   const patchNumber =
     (field: "height" | "weight") => (value: string) => {
       const num = parseFloat(value);
@@ -77,6 +90,11 @@ export function EventDetailPane({
                 src={event.imageUrl}
                 alt={event.caption}
                 className="h-56 w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.parentElement
+                    ?.classList.add("flex", "h-32", "items-center", "justify-center");
+                }}
               />
             </div>
           ) : (
@@ -103,7 +121,7 @@ export function EventDetailPane({
               <InlineFieldRow label={PANE3_FIELD_LABELS.imageUrl}>
                 <InlineTextField
                   value={event.imageUrl ?? ""}
-                  onSave={patch("imageUrl")}
+                  onSave={patchImageUrl}
                   ariaLabel={PANE3_FIELD_LABELS.imageUrl}
                   placeholder="https://..."
                 />

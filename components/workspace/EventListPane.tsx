@@ -31,7 +31,7 @@ export function EventListPane({
   const totalCount = groups.reduce((sum, g) => sum + g.items.length, 0);
 
   return (
-    <div className="flex w-64 shrink-0 flex-col border-r border-border bg-background">
+    <div className="flex w-80 shrink-0 flex-col border-r border-border bg-background">
       {/* ペインヘッダー */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
         <span className="text-sm font-semibold text-foreground">
@@ -40,16 +40,6 @@ export function EventListPane({
             {totalCount}件
           </span>
         </span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          onClick={onAddEvent}
-          title="イベントを追加"
-        >
-          <Plus className="size-4" />
-          <span className="sr-only">イベントを追加</span>
-        </Button>
       </div>
 
       {/* タイムラインリスト */}
@@ -59,9 +49,6 @@ export function EventListPane({
             <div className="flex flex-col items-center gap-2 px-4 py-12 text-center text-sm text-muted-foreground">
               <span className="text-2xl">📸</span>
               <span>まだイベントがありません</span>
-              <Button variant="outline" size="sm" onClick={onAddEvent}>
-                最初のイベントを追加
-              </Button>
             </div>
           )}
           {groups.map((group, groupIndex) => (
@@ -81,10 +68,10 @@ export function EventListPane({
                 const isSelected = event.id === selectedEventId;
                 const eventChildren = event.childIds
                   .map((id) => childMap[id])
-                  .filter(Boolean);
+                  .filter((c): c is Child => c != null);
                 const eventCategories = event.categoryIds
                   .map((id) => categoryMap[id])
-                  .filter(Boolean);
+                  .filter((c): c is Category => c != null);
 
                 return (
                   <button
@@ -92,7 +79,7 @@ export function EventListPane({
                     type="button"
                     onClick={() => onSelectEvent(event.id)}
                     className={[
-                      "flex w-full flex-col gap-1 px-4 py-2 text-left transition-colors",
+                      "flex w-full flex-col gap-1 px-4 py-2.5 text-left transition-colors",
                       isSelected
                         ? "bg-accent text-accent-foreground"
                         : "hover:bg-muted/60",
@@ -125,17 +112,21 @@ export function EventListPane({
                       </div>
                     </div>
                     {/* キャプション */}
-                    <span className="line-clamp-2 text-xs leading-relaxed text-foreground">
+                    <span className="line-clamp-2 text-sm leading-relaxed text-foreground">
                       {event.caption}
                     </span>
                     {/* サムネイル */}
                     {event.imageUrl && (
-                      <div className="mt-1 h-20 w-full overflow-hidden rounded-md bg-muted">
+                      <div className="mt-1 h-24 w-full overflow-hidden rounded-md bg-muted">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={event.imageUrl}
                           alt={event.caption}
                           className="size-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display =
+                              "none";
+                          }}
                         />
                       </div>
                     )}
@@ -146,12 +137,27 @@ export function EventListPane({
           ))}
         </div>
       </ScrollArea>
+
+      {/* クイック投稿ボタン（常に下部に固定） */}
+      <div className="shrink-0 border-t border-border p-3">
+        <Button
+          className="w-full gap-2"
+          onClick={onAddEvent}
+        >
+          <Plus className="size-4" />
+          今日の出来事を記録
+        </Button>
+      </div>
     </div>
   );
 }
 
-/** "2026-05-23" → "5/23" */
+/** "2026-05-23" → "5/23"。不正な形式はそのまま返す */
 function formatShortDate(date: string): string {
-  const [, m, d] = date.split("-");
-  return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+  const parts = date.split("-");
+  if (parts.length !== 3) return date;
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  if (isNaN(m) || isNaN(d)) return date;
+  return `${m}/${d}`;
 }
