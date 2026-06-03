@@ -125,12 +125,19 @@ export function Workspace({
     [],
   );
 
-  const addEvent = useCallback((caption: string) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const newEvent = createMinimalEvent(today, caption);
-    setEvents((prev) => [newEvent, ...prev]);
-    setSelectedEventId(newEvent.id);
-  }, []);
+  const addEvent = useCallback(
+    (caption: string) => {
+      const today = new Date().toISOString().slice(0, 10);
+      const newEvent = createMinimalEvent(today, caption);
+      // フィルターが有効な場合、新規イベントにフィルター条件を自動付与する。
+      // これにより追加直後でも現在のタイムラインに表示される。
+      if (selectedChildId) newEvent.childIds = [selectedChildId];
+      if (selectedCategoryId) newEvent.categoryIds = [selectedCategoryId];
+      setEvents((prev) => [newEvent, ...prev]);
+      setSelectedEventId(newEvent.id);
+    },
+    [selectedChildId, selectedCategoryId],
+  );
 
   const addChild = useCallback((name: string, emoji: string) => {
     const newChild: Child = {
