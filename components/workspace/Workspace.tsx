@@ -31,6 +31,17 @@ import {
 } from "@/lib/schema";
 import { formatMonthLabel, ALL_CHILDREN_LABEL } from "@/lib/labels";
 import { createMinimalEvent } from "@/lib/data/factories";
+import {
+  addEventAction,
+  updateEventAction,
+  addChildAction,
+  deleteChildAction,
+  reorderChildrenAction,
+  addCategoryAction,
+  deleteCategoryAction,
+  updateCategoryAction,
+  reorderCategoriesAction,
+} from "@/lib/actions";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { GlobalHeader } from "@/components/workspace/GlobalHeader";
 import { FamilyPane } from "@/components/workspace/FamilyPane";
@@ -149,6 +160,8 @@ export function Workspace({
       setEvents((prev) =>
         prev.map((e) => (e.id === id ? { ...e, ...patch } : e)),
       );
+      // 楽観的更新後に DB へ反映
+      void updateEventAction(id, patch);
     },
     [],
   );
@@ -161,21 +174,28 @@ export function Workspace({
       if (selectedCategoryIds.length > 0) newEvent.categoryIds = selectedCategoryIds;
       setEvents((prev) => [newEvent, ...prev]);
       setSelectedEventId(newEvent.id);
+      void addEventAction(newEvent);
     },
     [selectedPersonIds, selectedCategoryIds],
   );
 
   // --- 人物ハンドラー ---
 
-  const addChild = useCallback((name: string, emoji: string) => {
-    const newChild: Child = {
-      id: `child-${Date.now()}`,
-      name,
-      emoji,
-      birthdate: "",
-    };
-    setChildren((prev) => [...prev, newChild]);
-  }, []);
+  const addChild = useCallback(
+    (name: string, emoji: string) => {
+      const newChild: Child = {
+        id: `child-${Date.now()}`,
+        name,
+        emoji,
+        birthdate: "",
+      };
+      setChildren((prev) => {
+        void addChildAction(newChild, prev.length);
+        return [...prev, newChild];
+      });
+    },
+    [],
+  );
 
   const deleteChild = useCallback((id: string) => {
     setChildren((prev) => prev.filter((c) => c.id !== id));
@@ -187,22 +207,30 @@ export function Workspace({
           : e,
       ),
     );
+    void deleteChildAction(id);
   }, []);
 
   const reorderChildren = useCallback((newOrder: Child[]) => {
     setChildren(newOrder);
+    void reorderChildrenAction(newOrder.map((c) => c.id));
   }, []);
 
   // --- カテゴリハンドラー ---
 
-  const addCategory = useCallback((label: string, emoji: string) => {
-    const newCat: Category = {
-      id: `cat-${Date.now()}`,
-      label,
-      emoji,
-    };
-    setCategories((prev) => [...prev, newCat]);
-  }, []);
+  const addCategory = useCallback(
+    (label: string, emoji: string) => {
+      const newCat: Category = {
+        id: `cat-${Date.now()}`,
+        label,
+        emoji,
+      };
+      setCategories((prev) => {
+        void addCategoryAction(newCat, prev.length);
+        return [...prev, newCat];
+      });
+    },
+    [],
+  );
 
   const deleteCategory = useCallback((id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
@@ -214,6 +242,7 @@ export function Workspace({
           : e,
       ),
     );
+    void deleteCategoryAction(id);
   }, []);
 
   const updateCategory = useCallback(
@@ -221,12 +250,14 @@ export function Workspace({
       setCategories((prev) =>
         prev.map((c) => (c.id === id ? { ...c, ...patch } : c)),
       );
+      void updateCategoryAction(id, patch);
     },
     [],
   );
 
   const reorderCategories = useCallback((newOrder: Category[]) => {
     setCategories(newOrder);
+    void reorderCategoriesAction(newOrder.map((c) => c.id));
   }, []);
 
   const togglePane4 = useCallback(() => setPane4Open((v) => !v), []);
