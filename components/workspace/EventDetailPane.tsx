@@ -9,7 +9,10 @@
  * Pane 4 は AI サマリー専用として責務を分離済み。
  */
 
-import { Image } from "lucide-react";
+import { useRef, useState } from "react";
+import { Image, ImagePlus, Loader2 } from "lucide-react";
+
+import { uploadPhoto } from "@/lib/storage";
 
 import {
   type FamilyEvent,
@@ -41,6 +44,23 @@ export function EventDetailPane({
 }: EventDetailPaneProps) {
   const childMap = Object.fromEntries(children.map((c) => [c.id, c]));
   const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c]));
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !event) return;
+    e.target.value = "";
+    setPhotoUploading(true);
+    try {
+      const imageUrl = await uploadPhoto(file);
+      onUpdateEvent(event.id, { imageUrl });
+    } catch {
+      alert("写真のアップロードに失敗しました。");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   if (!event) {
     return (
@@ -53,10 +73,6 @@ export function EventDetailPane({
 
   const patch = (field: keyof FamilyEvent) => (value: string) =>
     onUpdateEvent(event.id, { [field]: value });
-
-  // imageUrl は空文字を undefined として保存する（スキーマの transform と同様に正規化）
-  const patchImageUrl = (value: string) =>
-    onUpdateEvent(event.id, { imageUrl: value.trim() || undefined });
 
   const patchNumber =
     (field: "height" | "weight") => (value: string) => {
@@ -83,28 +99,56 @@ export function EventDetailPane({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-5">
           {/* 写真 */}
-          {event.imageUrl ? (
-            <div className="overflow-hidden rounded-lg bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={event.imageUrl}
-                alt={event.caption}
-                className="h-56 w-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.parentElement
-                    ?.classList.add("flex", "h-32", "items-center", "justify-center");
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border bg-muted/40">
-              <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
-                <Image className="size-6" />
-                <span className="text-xs">写真 URL を入力すると表示されます</span>
-              </div>
-            </div>
-          )}
+          <div className="relative">
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void handlePhotoChange(e)}
+            />
+            {event.imageUrl ? (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoUploading}
+                className="group relative w-full overflow-hidden rounded-lg bg-muted"
+                aria-label="写真を変更"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={event.imageUrl}
+                  alt={event.caption}
+                  className="h-56 w-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/30">
+                  {photoUploading ? (
+                    <Loader2 className="size-6 animate-spin text-white" />
+                  ) : (
+                    <span className="hidden rounded bg-black/60 px-2 py-1 text-xs text-white group-hover:block">
+                      写真を変更
+                    </span>
+                  )}
+                </div>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoUploading}
+                className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 text-muted-foreground hover:bg-muted/60"
+              >
+                {photoUploading ? (
+                  <Loader2 className="size-6 animate-spin" />
+                ) : (
+                  <>
+                    <ImagePlus className="size-6" />
+                    <span className="text-xs">写真を追加</span>
+                  </>
+                )}
+              </button>
+            )}
+          </div>
 
           {/* 基本情報 */}
           <section className="flex flex-col gap-3">
@@ -115,15 +159,6 @@ export function EventDetailPane({
                   value={event.date}
                   onSave={patch("date")}
                   ariaLabel={PANE3_FIELD_LABELS.date}
-                />
-              </InlineFieldRow>
-
-              <InlineFieldRow label={PANE3_FIELD_LABELS.imageUrl}>
-                <InlineTextField
-                  value={event.imageUrl ?? ""}
-                  onSave={patchImageUrl}
-                  ariaLabel={PANE3_FIELD_LABELS.imageUrl}
-                  placeholder="https://..."
                 />
               </InlineFieldRow>
 

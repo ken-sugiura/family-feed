@@ -48,7 +48,7 @@ import { FamilyPane } from "@/components/workspace/FamilyPane";
 import { EventListPane } from "@/components/workspace/EventListPane";
 import { EventDetailPane } from "@/components/workspace/EventDetailPane";
 import { AiSummaryPane } from "@/components/workspace/AiSummaryPane";
-import { AddItemDialog } from "@/components/workspace/AddItemDialog";
+import { AddEventDialog } from "@/components/workspace/AddEventDialog";
 
 type WorkspaceProps = {
   initialChildren: Child[];
@@ -167,11 +167,12 @@ export function Workspace({
   );
 
   const addEvent = useCallback(
-    (caption: string) => {
+    (caption: string, imageUrl?: string) => {
       const today = new Date().toISOString().slice(0, 10);
       const newEvent = createMinimalEvent(today, caption);
       if (selectedPersonIds.length > 0) newEvent.childIds = selectedPersonIds;
       if (selectedCategoryIds.length > 0) newEvent.categoryIds = selectedCategoryIds;
+      if (imageUrl) newEvent.imageUrl = imageUrl;
       setEvents((prev) => [newEvent, ...prev]);
       setSelectedEventId(newEvent.id);
       void addEventAction(newEvent);
@@ -334,14 +335,9 @@ export function Workspace({
         </SidebarInset>
       </SidebarProvider>
 
-      <AddItemDialog
+      <AddEventDialog
         open={addEventOpen}
         onOpenChange={setAddEventOpen}
-        title="イベントを追加"
-        description="今日のちょっとした出来事を記録しましょう"
-        fieldLabel="一言キャプション"
-        fieldId="event-caption"
-        placeholder="例: 公園で初めて鉄棒できた！"
         onAdd={addEvent}
       />
     </>
