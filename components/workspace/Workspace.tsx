@@ -20,6 +20,7 @@
  */
 
 import { useState, useCallback, useMemo } from "react";
+import { List, FileText, SlidersHorizontal, Plus } from "lucide-react";
 
 import {
   type Child,
@@ -49,6 +50,8 @@ import { EventListPane } from "@/components/workspace/EventListPane";
 import { EventDetailPane } from "@/components/workspace/EventDetailPane";
 import { AiSummaryPane } from "@/components/workspace/AiSummaryPane";
 import { AddEventDialog } from "@/components/workspace/AddEventDialog";
+import { MobileFilterPane } from "@/components/workspace/MobileFilterPane";
+import { ThemeToggle } from "@/components/workspace/ThemeToggle";
 
 type WorkspaceProps = {
   initialChildren: Child[];
@@ -76,6 +79,9 @@ export function Workspace({
   );
   const [pane4Open, setPane4Open] = useState(true);
   const [addEventOpen, setAddEventOpen] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<
+    "timeline" | "detail" | "filter"
+  >("timeline");
 
   // フィルター適用済みイベント: (人物 OR) AND (カテゴリ OR)
   const filteredEvents = useMemo(() => {
@@ -263,6 +269,12 @@ export function Workspace({
 
   const togglePane4 = useCallback(() => setPane4Open((v) => !v), []);
 
+  // モバイル: イベント選択 → 詳細タブへ自動切り替え
+  const selectEventMobile = useCallback((id: string) => {
+    setSelectedEventId(id);
+    setActiveMobileTab("detail");
+  }, []);
+
   // ヘッダーのフィルターラベル（複数選択対応）
   const filterLabel = useMemo(() => {
     const personLabels = selectedPersonIds.map(
@@ -277,9 +289,91 @@ export function Workspace({
 
   return (
     <>
+      {/* ===== モバイルレイアウト（〜md未満） ===== */}
+      <div className="flex h-dvh flex-col bg-background text-foreground md:hidden">
+        {/* ヘッダー */}
+        <header className="flex h-12 shrink-0 items-center border-b border-border px-4">
+          <span className="flex-1 truncate text-sm font-semibold">
+            {workspace.name}
+          </span>
+          <ThemeToggle />
+        </header>
+
+        {/* タブコンテンツ */}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div className={activeMobileTab === "timeline" ? "h-full" : "hidden"}>
+            <EventListPane
+              groups={monthGroups}
+              children={children}
+              categories={categories}
+              selectedEventId={resolvedEventId}
+              onSelectEvent={selectEventMobile}
+              onAddEvent={() => setAddEventOpen(true)}
+            />
+          </div>
+          <div className={activeMobileTab === "detail" ? "h-full" : "hidden"}>
+            <EventDetailPane
+              key={resolvedEventId ?? "empty"}
+              event={activeEvent}
+              children={children}
+              categories={categories}
+              onUpdateEvent={updateEvent}
+            />
+          </div>
+          <div className={activeMobileTab === "filter" ? "h-full" : "hidden"}>
+            <MobileFilterPane
+              children={children}
+              categories={categories}
+              events={events}
+              selectedPersonIds={selectedPersonIds}
+              selectedCategoryIds={selectedCategoryIds}
+              onTogglePerson={togglePerson}
+              onToggleCategory={toggleCategory}
+              onClearFilters={clearFilters}
+            />
+          </div>
+        </div>
+
+        {/* FAB（フローティング投稿ボタン） */}
+        <button
+          type="button"
+          onClick={() => setAddEventOpen(true)}
+          className="fixed bottom-20 right-4 z-50 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95"
+          aria-label="今日の出来事を記録"
+        >
+          <Plus className="size-6" />
+        </button>
+
+        {/* 下部タブバー */}
+        <nav className="flex h-16 shrink-0 items-stretch border-t border-border bg-background">
+          {(
+            [
+              { id: "timeline", icon: List, label: "タイムライン" },
+              { id: "detail", icon: FileText, label: "詳細" },
+              { id: "filter", icon: SlidersHorizontal, label: "フィルター" },
+            ] as const
+          ).map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveMobileTab(id)}
+              className={`flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors ${
+                activeMobileTab === id
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="size-5" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* ===== デスクトップレイアウト（md以上） ===== */}
       <SidebarProvider
         defaultOpen
-        className="h-screen w-full overflow-hidden bg-background text-foreground"
+        className="hidden h-screen w-full overflow-hidden bg-background text-foreground md:flex"
       >
         <FamilyPane
           workspaceName={workspace.name}
